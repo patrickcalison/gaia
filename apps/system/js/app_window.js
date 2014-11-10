@@ -8,6 +8,7 @@
 /* global SettingsListener */
 /* global StatusBar */
 /* global System */
+/* global DUMP */
 'use strict';
 
 (function(exports) {
@@ -231,6 +232,9 @@
    */
   AppWindow.prototype.setVisibleForScreenReader =
     function aw_setVisibleForScreenReader(visible) {
+      if (!this.element) {
+        return;
+      }
       this.element.setAttribute('aria-hidden', !visible);
     };
 
@@ -422,21 +426,26 @@
     if (this.isActive() && this.getBottomMostWindow().isActive() &&
         !this.isHomescreen) {
 
-      var fallbackTimeout;
       var onClosed = function() {
-        clearTimeout(fallbackTimeout);
         this.element.removeEventListener('_closed', onClosed);
         this.destroy();
       }.bind(this);
 
       this.element.addEventListener('_closed', onClosed);
-      fallbackTimeout = setTimeout(onClosed,
-        this.transitionController.CLOSING_TRANSITION_TIMEOUT);
 
       if (this.previousWindow) {
         this.previousWindow.getBottomMostWindow().open('in-from-left');
         this.close('out-to-right');
       } else {
+        if (this.transitionController) {
+          // In normal case,
+          // the window manager will call this.close() to response
+          // the requestClose(), and when the timeout here is reached,
+          // it will not close again because transition controller
+          // is taking care of that.
+          setTimeout(this.close.bind(this, 'immediate'),
+            this.transitionController.CLOSING_TRANSITION_TIMEOUT);
+        }
         this.requestClose();
       }
     } else {
@@ -1053,6 +1062,12 @@
       if (TRACE) {
         console.trace();
       }
+    } else if (window.DUMP) {
+      DUMP('[' + this.CLASS_NAME + ']' +
+        '[' + (this.name || this.origin) + ']' +
+        '[' + this.instanceID + ']' +
+        '[' + System.currentTime() + '] ' +
+        Array.slice(arguments).concat());
     }
   };
 
@@ -1819,19 +1834,9 @@
   };
 
   AppWindow.prototype._handle__closed = function aw_closed() {
-    //
-    // Never take screenshots of the homescreen.
-    //
-    // We don't need the screenshot of homescreen because:
-    // 1. Homescreen background is transparent,
-    //    currently gecko only sends JPG to us.
-    //    See bug 878003.
-    // 2. Homescreen screenshot isn't required by card view.
-    //    Since getScreenshot takes additional memory usage,
-    //    let's early return here.
-    // 3. We want to remove this long term, see bug 1072781.
-    //
-    if (this.getBottomMostWindow().isHomescreen) {
+    if (System.isBusyLoading() && this.getBottomMostWindow().isHomescreen) {
+      // We will eventually get screenshot when being requested from
+      // task manager.
       return;
     }
     // Update screenshot blob here to avoid slowing down closing transitions.

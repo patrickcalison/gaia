@@ -294,7 +294,6 @@ navigator.mozSetMessageHandler('activity', function viewVideo(activity) {
       dom.player.currentTime = 0;
 
       // Show the controls briefly then fade out
-      setControlsVisibility(true);
       controlFadeTimeout = setTimeout(function() {
         setControlsVisibility(false);
       }, 2000);
@@ -303,6 +302,7 @@ navigator.mozSetMessageHandler('activity', function viewVideo(activity) {
     }
 
     dom.videoTitle.textContent = title || '';
+    setControlsVisibility(true);
 
     var loadingChecker =
       new VideoLoadingChecker(dom.player, dom.inUseOverlay,

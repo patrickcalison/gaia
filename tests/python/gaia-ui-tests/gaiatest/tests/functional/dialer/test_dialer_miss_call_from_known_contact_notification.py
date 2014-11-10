@@ -3,6 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from marionette import SkipTest
+from marionette.wait import Wait
+
 from gaiatest import GaiaTestCase
 from gaiatest.apps.phone.regions.call_screen import CallScreen
 from gaiatest.apps.system.app import System
@@ -41,12 +43,16 @@ class TestReceiveCallFromKnownContactNotification(GaiaTestCase):
             self.testvars['plivo']['phone_number']
         )
         self.call_uuid = self.plivo.make_call(
-            to_number=self.testvars['carrier']['phone_number'].replace('+', ''),
+            to_number=self.testvars['local_phone_numbers'][0].replace('+', ''),
             timeout=PLIVO_TIMEOUT)
 
         call_screen = CallScreen(self.marionette)
         call_screen.wait_for_incoming_call_with_locked_screen()
         self.plivo.hangup_call(self.call_uuid)
+
+        Wait(self.plivo, timeout=PLIVO_TIMEOUT).until(
+            lambda p: p.is_call_completed(self.call_uuid),
+            message="Plivo didn't report the call as completed")
         self.call_uuid = None
 
         # Verify the user sees a missed call notification message

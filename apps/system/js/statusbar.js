@@ -22,11 +22,11 @@
 
 var StatusBar = {
   /* all elements that are children nodes of the status bar */
-  ELEMENTS: ['emergency-cb-notification', 'time', 'connections',
-    'battery', 'wifi', 'data', 'flight-mode', 'network-activity', 'tethering',
-    'alarm', 'bluetooth', 'mute', 'headphones', 'bluetooth-headphones',
-    'bluetooth-transferring', 'recording', 'sms', 'geolocation', 'usb', 'label',
-    'system-downloads', 'call-forwardings', 'playing', 'nfc'],
+  ELEMENTS: ['emergency-cb-notification', 'time', 'connections', 'battery',
+    'wifi', 'data', 'flight-mode', 'network-activity', 'tethering', 'alarm',
+    'debugging', 'bluetooth', 'mute', 'headphones', 'bluetooth-headphones',
+    'bluetooth-transferring', 'recording', 'sms', 'geolocation', 'usb',
+    'label', 'system-downloads', 'call-forwardings', 'playing', 'nfc'],
 
   // The indices indicate icons priority (lower index = highest priority)
   // In each subarray:
@@ -40,6 +40,7 @@ var StatusBar = {
     ['wifi', 16 + 4],
     ['connections', null], // Width can change
     ['time', null], // Width can change
+    ['debugging', 16 + 4],
     ['system-downloads', 16 + 4],
     ['geolocation', 16 + 4],
     ['network-activity', 16 + 4],
@@ -110,7 +111,8 @@ var StatusBar = {
     'ril.cf.enabled': ['callForwarding'],
     'operatorResources.data.icon': ['iconData'],
     'statusbar.network-activity.disabled': ['networkActivity'],
-    'statusbar.show-am-pm': ['time']
+    'statusbar.show-am-pm': ['time'],
+    'debugger.remote-mode': ['debugging']
   },
 
   /* Track which settings are observed, so we don't add multiple listeners. */
@@ -137,6 +139,7 @@ var StatusBar = {
    * it triggers the icon "systemDownloads"
    */
   systemDownloadsCount: 0,
+  systemDownloads: {},
 
   _minimizedStatusBarWidth: window.innerWidth,
 
@@ -171,6 +174,7 @@ var StatusBar = {
     window.addEventListener('apptitlestatechanged', this);
     window.addEventListener('activitytitlestatechanged', this);
     window.addEventListener('appchromecollapsed', this);
+    window.addEventListener('emergencycallbackstatechanged', this);
   },
 
   addSettingsListener: function sb_addSettingsListener(settingKey) {
@@ -287,9 +291,6 @@ var StatusBar = {
     window.addEventListener('lockscreen-appclosing', this);
     window.addEventListener('lockpanelchange', this);
 
-    window.addEventListener('simpinshow', this);
-    window.addEventListener('simpinclose', this);
-
     // Listen to orientation change and SHB activation/deactivation.
     window.addEventListener('system-resize', this);
 
@@ -300,6 +301,13 @@ var StatusBar = {
     window.addEventListener('homescreenopening', this);
     window.addEventListener('homescreenopened', this);
     window.addEventListener('stackchanged', this);
+
+    // Track Downloads via the Downloads API.
+    var mozDownloadManager = navigator.mozDownloadManager;
+    if (mozDownloadManager) {
+      mozDownloadManager.addEventListener('downloadstart',
+                                          this.handleEvent.bind(this));
+    }
 
     // We need to preventDefault on mouse events until
     // https://bugzilla.mozilla.org/show_bug.cgi?id=1005815 lands
@@ -319,6 +327,10 @@ var StatusBar = {
 
   handleEvent: function sb_handleEvent(evt) {
     switch (evt.type) {
+      case 'emergencycallbackstatechanged':
+        this.updateEmergencyCbNotification(evt.detail);
+        break;
+
       case 'screenchange':
         this.setActive(evt.detail.screenEnabled);
         break;
@@ -567,6 +579,44 @@ var StatusBar = {
         // the bottom window as it will *become* the shown window.
         this.setAppearance(evt.detail, true);
         this.element.classList.remove('hidden');
+        break;
+      case 'downloadstart':
+        // New download, track it so we can show or hide the active downloads
+        // indicator. If you think this logic needs to change, think really hard
+        // about it and then come and ask @nullaus
+        evt.download.onstatechange = function(downloadEvent) {
+          var download = downloadEvent.download;
+          switch(download.state) {
+            case 'downloading':
+              // If this download has not already been tracked as actively
+              // downloading we'll add it to our list and increment the
+              // downloads counter.
+              if (!this.systemDownloads[download.id]) {
+                this.incSystemDownloads();
+                this.systemDownloads[download.id] = true;
+              }
+              break;
+            // Once the download is finalized, and only then, is it safe to
+            // remove our state change listener. If we remove it before then
+            // we are likely to miss paused or errored downloads being restarted
+            case 'finalized':
+              download.onstatechange = null;
+              break;
+            // All other state changes indicate the download is no longer
+            // active, if we were previously tracking the download as active
+            // we'll decrement the counter now and remove it from active
+            // download status.
+            case 'stopped':
+            case 'succeeded':
+              if (this.systemDownloads[download.id]) {
+                this.decSystemDownloads();
+                delete this.systemDownloads[download.id];
+              }
+              break;
+            default:
+              console.warn('Unexpected download state = ', download.state);
+          }
+        }.bind(this);
         break;
     }
   },
@@ -1495,6 +1545,14 @@ var StatusBar = {
     nfc: function sb_updateNfc() {
       var icon = this.icons.nfc;
       icon.hidden = !this.nfcActive;
+
+      this._updateIconVisibility();
+    },
+
+    debugging: function sb_updateDebugging() {
+      var icon = this.icons.debugging;
+
+      icon.hidden = this.settingValues['debugger.remote-mode'] == 'disabled';
 
       this._updateIconVisibility();
     }

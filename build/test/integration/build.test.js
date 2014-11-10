@@ -2,7 +2,6 @@ var assert = require('chai').assert;
 var fs = require('fs');
 var path = require('path');
 var AdmZip = require('adm-zip');
-var dive = require('dive');
 var helper = require('./helper');
 
 suite('Integration tests', function() {
@@ -148,20 +147,6 @@ suite('Integration tests', function() {
 
       restoreFunc();
       done();
-    });
-  });
-
-  suite('Build file inclusion tests', function() {
-    test('build includes elements folder and sim_picker', function(done) {
-      helper.exec('make', function(error, stdout, stderr) {
-        var pathInZip = 'shared/elements/sim_picker.html';
-        var zipPath = path.join(process.cwd(), 'profile', 'webapps',
-          'communications.gaiamobile.org', 'application.zip');
-        var expectedSimPickerPath = path.join(process.cwd(),
-          'shared', 'elements', 'sim_picker.html');
-        helper.checkFileInZip(zipPath, pathInZip, expectedSimPickerPath);
-        done();
-      });
     });
   });
 

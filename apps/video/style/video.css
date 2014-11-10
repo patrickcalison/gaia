@@ -250,6 +250,18 @@ span.line-break {
 }
 
 /*
+ * In view.html (but not index.html) we put the in-use-overlay element
+ * inside videoControls. In that case there is a 5rem title bar that needs
+ * to be visible, so we alter the top position. And if we're handling
+ * a pick activity, we also need the title bar with the back button to show.
+ */
+#videoControls > #in-use-overlay,
+body.pick-activity > #in-use-overlay {
+  top: 5rem;
+}
+
+
+/*
  * The overlay content area holds the text of the overlay.
  * It has borders and a less transparent background so that
  * the overlay text shows up more clearly
