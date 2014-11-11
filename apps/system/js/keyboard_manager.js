@@ -112,6 +112,7 @@ var KeyboardManager = {
 
     // get enabled keyboard from mozSettings, parse their manifest
     LazyLoader.load([
+      'shared/js/input_mgmt/input_app_list.js',
       'shared/js/keyboard_helper.js'
     ], function() {
       KeyboardHelper.watchLayouts(
@@ -301,6 +302,7 @@ var KeyboardManager = {
       console.warn('trying to set a layout group to show that doesnt exist');
       return;
     }
+
     if (undefined === index) {
       index = this.inputLayouts.layouts[group].activeLayout;
     }
@@ -311,15 +313,15 @@ var KeyboardManager = {
       this.inputWindowManager.preloadInputWindow(layout);
     } else {
       this.inputWindowManager.showInputWindow(layout);
+
+      this.inputLayouts.layouts[group].activeLayout = index;
+      KeyboardHelper.saveCurrentActiveLayout(group,
+        layout.id, layout.manifestURL);
     }
 
     this._setShowingLayoutInfo(group, index, layout);
 
     this.inputLayouts.setGroupsActiveLayout(layout);
-
-    this.inputLayouts.layouts[group].activeLayout = index;
-    KeyboardHelper.saveCurrentActiveLayout(group,
-      layout.id, layout.manifestURL);
   },
 
   /**
