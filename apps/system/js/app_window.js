@@ -7,7 +7,7 @@
 /* global ScreenLayout */
 /* global SettingsListener */
 /* global StatusBar */
-/* global System */
+/* global Service */
 /* global DUMP */
 'use strict';
 
@@ -582,6 +582,10 @@
       this.element.classList.add('browser');
     }
 
+    if (this.isPrivateBrowser()) {
+      this.element.classList.add('private');
+    }
+
     this.browserContainer = this.element.querySelector('.browser-container');
     this.browserContainer.appendChild(this.browser.element);
 
@@ -629,6 +633,15 @@
    */
   AppWindow.prototype.isBrowser = function aw_isbrowser() {
     return !this.manifestURL;
+  };
+
+  /**
+   * Checks if an appWindow is a private window.
+   *
+   * @return {Boolean} is the current instance a private window.
+   */
+  AppWindow.prototype.isPrivateBrowser = function aw_isprivate() {
+    return !!this.browser_config.isPrivate;
   };
 
   /**
@@ -1056,7 +1069,7 @@
       console.log('[' + this.CLASS_NAME + ']' +
         '[' + (this.name || this.origin) + ']' +
         '[' + this.instanceID + ']' +
-        '[' + System.currentTime() + '] ' +
+        '[' + Service.currentTime() + '] ' +
         Array.slice(arguments).concat());
 
       if (TRACE) {
@@ -1066,7 +1079,7 @@
       DUMP('[' + this.CLASS_NAME + ']' +
         '[' + (this.name || this.origin) + ']' +
         '[' + this.instanceID + ']' +
-        '[' + System.currentTime() + '] ' +
+        '[' + Service.currentTime() + '] ' +
         Array.slice(arguments).concat());
     }
   };
@@ -1075,7 +1088,7 @@
   AppWindow.prototype.forceDebug = function aw_debug(msg) {
     console.log('[Dump:' + this.CLASS_NAME + ']' +
       '[' + (this.name || this.origin) + ']' +
-      '[' + System.currentTime() + ']' +
+      '[' + Service.currentTime() + ']' +
       Array.slice(arguments).concat());
   };
 
@@ -1407,6 +1420,10 @@
     this.resized = true;
     if (this.screenshotOverlay) {
       this.screenshotOverlay.style.visibility = '';
+    }
+
+    if (this.modalDialog && this.modalDialog.isVisible()) {
+      this.modalDialog.updateMaxHeight();
     }
 
     /**
@@ -1834,7 +1851,7 @@
   };
 
   AppWindow.prototype._handle__closed = function aw_closed() {
-    if (System.isBusyLoading() && this.getBottomMostWindow().isHomescreen) {
+    if (Service.isBusyLoading() && this.getBottomMostWindow().isHomescreen) {
       // We will eventually get screenshot when being requested from
       // task manager.
       return;

@@ -1,5 +1,5 @@
 /* global AppWindow, ScreenLayout, MockOrientationManager,
-      LayoutManager, MocksHelper, MockContextMenu, layoutManager, System,
+      LayoutManager, MocksHelper, MockContextMenu, layoutManager, Service,
       MockAppTransitionController, MockPermissionSettings, DocumentFragment */
 'use strict';
 
@@ -57,7 +57,7 @@ suite('system/AppWindow', function() {
     function() {
       return document.createElement('div');
     });
-    requireApp('system/js/system.js');
+    requireApp('system/js/service.js');
     requireApp('system/js/browser_config_helper.js');
     requireApp('system/js/browser_frame.js');
     requireApp('system/js/app_window.js');
@@ -94,6 +94,13 @@ suite('system/AppWindow', function() {
     url: 'app://www.fake4/index.html',
     manifest: {},
     origin: 'app://www.fake4'
+  };
+
+  var fakePrivateConfig = {
+    url: 'http://www.private/index.html',
+    manifest: {},
+    origin: 'http://www.private',
+    isPrivate: true
   };
 
   var fakeAppConfigBackground = {
@@ -1484,7 +1491,7 @@ suite('system/AppWindow', function() {
       app1.isHomescreen = true;
       var app2 = new AppWindow(fakeAppConfig2);
 
-      this.sinon.stub(System, 'isBusyLoading').returns(true);
+      this.sinon.stub(Service, 'isBusyLoading').returns(true);
       injectFakeMozBrowserAPI(app1.browser.element);
       injectFakeMozBrowserAPI(app2.browser.element);
       var stubScreenshot = this.sinon.stub(app1.browser.element,
@@ -2047,6 +2054,14 @@ suite('system/AppWindow', function() {
     assert.isFalse(app1.isBrowser());
     assert.isTrue(app2.isBrowser());
     assert.isTrue(app2.element.classList.contains('browser'));
+  });
+
+  test('isPrivateBrowser', function() {
+    var app1 = new AppWindow(fakeAppConfig1);
+    var app2 = new AppWindow(fakePrivateConfig);
+    assert.isFalse(app1.isPrivateBrowser());
+    assert.isTrue(app2.isPrivateBrowser());
+    assert.isTrue(app2.element.classList.contains('private'));
   });
 
   test('isCertified', function() {

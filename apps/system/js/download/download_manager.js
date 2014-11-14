@@ -20,6 +20,9 @@ var DownloadManager = (function() {
     return;
   }
 
+  // XXX bug 1097435 -- This is the only safe place we can call this for now.
+  mozDownloadManager.clearAllDone();
+
   // This object stores download notification objects by id
   var notifications = {};
   var started = false;

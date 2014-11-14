@@ -1,5 +1,5 @@
 'use strict';
-/* global System, SearchWindow, places */
+/* global Service, SearchWindow, places */
 
 (function(exports) {
 
@@ -15,7 +15,6 @@
     this.enabled = false;
     this.focused = false;
     this.active = false;
-    this.currentApp = null;
 
     // Properties
     this._port = null; // Inter-app communications port
@@ -68,7 +67,7 @@
     start: function() {
       this.addEventListeners();
       this.enabled = true;
-      System.request('registerHierarchy', this);
+      Service.request('registerHierarchy', this);
     },
 
     /**
@@ -303,15 +302,20 @@
         case 'global-search-request':
           // XXX: fix the WindowManager coupling
           // but currently the transition sequence is crucial for performance
-          var app = System.currentApp;
+          var app = Service.currentApp;
           var afterActivate;
 
           // If the app is not a browser, retain the search value and activate.
           if (app && !app.isBrowser()) {
             afterActivate = this.focus.bind(this);
           } else {
-            // Set the input to be the URL in the case of a browser.
-            this.setInput(app.config.url);
+            // Clear the input if the URL starts with a system page.
+            if (app.config.url.startsWith('app://system.gaiamobile.org')) {
+              this.setInput('');
+            } else {
+              // Set the input to be the URL in the case of a normal browser.
+              this.setInput(app.config.url);
+            }
 
             afterActivate = () => {
               this.hideResults();
@@ -541,6 +545,11 @@
         action: 'submit',
         input: this.input.value
       });
+
+      // Do not persist search submissions from private windows.
+      if (Service.currentApp.isPrivateBrowser()) {
+        this.setInput('');
+      }
     },
 
     /**

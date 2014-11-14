@@ -15,7 +15,7 @@
 */
 
 /*global Clock, SettingsListener, TouchForwarder, FtuLauncher, MobileOperator,
-         SIMSlotManager, System, Bluetooth, UtilityTray, nfcManager,
+         SIMSlotManager, Service, Bluetooth, UtilityTray, nfcManager,
          layoutManager */
 
 'use strict';
@@ -151,8 +151,8 @@ var StatusBar = {
   /* For other modules to acquire */
   get height() {
     if (document.mozFullScreen ||
-               (System.currentApp &&
-                System.currentApp.isFullScreen())) {
+               (Service.currentApp &&
+                Service.currentApp.isFullScreen())) {
       return 0;
     } else {
       return this._cacheHeight ||
@@ -305,8 +305,7 @@ var StatusBar = {
     // Track Downloads via the Downloads API.
     var mozDownloadManager = navigator.mozDownloadManager;
     if (mozDownloadManager) {
-      mozDownloadManager.addEventListener('downloadstart',
-                                          this.handleEvent.bind(this));
+      mozDownloadManager.addEventListener('downloadstart', this);
     }
 
     // We need to preventDefault on mouse events until
@@ -352,7 +351,7 @@ var StatusBar = {
         this._inLockScreenMode = false;
         this.toggleTimeLabel(true);
         this._updateIconVisibility();
-        this.setAppearance(System.currentApp);
+        this.setAppearance(Service.currentApp);
         break;
 
       case 'attentionopened':
@@ -551,7 +550,7 @@ var StatusBar = {
         break;
 
       case 'stackchanged':
-        this.setAppearance(System.currentApp);
+        this.setAppearance(Service.currentApp);
         this.element.classList.remove('hidden');
         break;
 
@@ -584,41 +583,47 @@ var StatusBar = {
         // New download, track it so we can show or hide the active downloads
         // indicator. If you think this logic needs to change, think really hard
         // about it and then come and ask @nullaus
-        evt.download.onstatechange = function(downloadEvent) {
-          var download = downloadEvent.download;
-          switch(download.state) {
-            case 'downloading':
-              // If this download has not already been tracked as actively
-              // downloading we'll add it to our list and increment the
-              // downloads counter.
-              if (!this.systemDownloads[download.id]) {
-                this.incSystemDownloads();
-                this.systemDownloads[download.id] = true;
-              }
-              break;
-            // Once the download is finalized, and only then, is it safe to
-            // remove our state change listener. If we remove it before then
-            // we are likely to miss paused or errored downloads being restarted
-            case 'finalized':
-              download.onstatechange = null;
-              break;
-            // All other state changes indicate the download is no longer
-            // active, if we were previously tracking the download as active
-            // we'll decrement the counter now and remove it from active
-            // download status.
-            case 'stopped':
-            case 'succeeded':
-              if (this.systemDownloads[download.id]) {
-                this.decSystemDownloads();
-                delete this.systemDownloads[download.id];
-              }
-              break;
-            default:
-              console.warn('Unexpected download state = ', download.state);
-          }
-        }.bind(this);
+        this.addSystemDownloadListeners(evt.download);
         break;
     }
+  },
+
+  addSystemDownloadListeners: function(download) {
+    var handler = function handleDownloadStateChange(downloadEvent) {
+      var download = downloadEvent.download;
+      switch(download.state) {
+        case 'downloading':
+          // If this download has not already been tracked as actively
+          // downloading we'll add it to our list and increment the
+          // downloads counter.
+          if (!this.systemDownloads[download.id]) {
+            this.incSystemDownloads();
+            this.systemDownloads[download.id] = true;
+          }
+          break;
+        // Once the download is finalized, and only then, is it safe to
+        // remove our state change listener. If we remove it before then
+        // we are likely to miss paused or errored downloads being restarted
+        case 'finalized':
+          download.removeEventListener('statechange', handler);
+          break;
+        // All other state changes indicate the download is no longer
+        // active, if we were previously tracking the download as active
+        // we'll decrement the counter now and remove it from active
+        // download status.
+        case 'stopped':
+        case 'succeeded':
+          if (this.systemDownloads[download.id]) {
+            this.decSystemDownloads();
+            delete this.systemDownloads[download.id];
+          }
+          break;
+        default:
+          console.warn('Unexpected download state = ', download.state);
+      }
+    }.bind(this);
+
+    download.addEventListener('statechange', handler);
   },
 
   setAppearance: function(app, useBottomWindow) {
@@ -659,7 +664,7 @@ var StatusBar = {
   },
 
   _updateMinimizedStatusBarWidth: function sb_updateMinimizedStatusBarWidth() {
-    var app = System.currentApp;
+    var app = Service.currentApp;
     app = app && app.getTopMostWindow();
 
     // Get the actual width of the rocketbar, and determine the remaining
@@ -772,7 +777,7 @@ var StatusBar = {
   },
 
   panelHandler: function sb_panelHandler(evt) {
-    var app = System.currentApp.getTopMostWindow();
+    var app = Service.currentApp.getTopMostWindow();
     var chromeBar = app.element.querySelector('.chrome');
     var titleBar = app.element.querySelector('.titlebar');
 
@@ -1833,7 +1838,7 @@ var StatusBar = {
 
   // To reduce the duplicated code
   isLocked: function() {
-    return System.locked;
+    return Service.locked;
   },
 
   toCamelCase: function sb_toCamelCase(str) {

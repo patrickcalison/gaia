@@ -41,6 +41,7 @@ requireApp('system/js/rocketbar.js');
 requireApp('system/js/home_gesture.js');
 requireApp('system/js/homescreen_launcher.js');
 requireApp('system/js/internet_sharing.js');
+requireApp('system/js/input_window_manager.js');
 requireApp('system/js/layout_manager.js');
 requireApp('system/js/lockscreen_agent.js');
 requireApp('system/js/lockscreen_window_manager.js');
@@ -66,7 +67,7 @@ requireApp('system/js/visibility_manager.js');
 requireApp('system/js/wallpaper_manager.js');
 requireApp('system/js/attention_window_manager.js');
 requireApp('system/js/attention_indicator.js');
-requireApp('system/js/system.js');
+requireApp('system/js/service.js');
 
 requireApp('system/test/unit/mock_app_window.js');
 requireApp('system/test/unit/mock_attention_window.js');

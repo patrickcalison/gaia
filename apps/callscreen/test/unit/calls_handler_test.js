@@ -137,10 +137,10 @@ suite('calls handler', function() {
 
       test('should render the CallScreen in incoming mode', function() {
         this.sinon.spy(MockCallScreen, 'render');
-        this.sinon.spy(MockCallScreen, 'toggle');
+        this.sinon.spy(MockCallScreen, 'setCallerContactImage');
         MockNavigatorMozTelephony.mTriggerCallsChanged();
         sinon.assert.calledWith(MockCallScreen.render, 'incoming');
-        sinon.assert.calledOnce(MockCallScreen.toggle);
+        sinon.assert.calledOnce(MockCallScreen.setCallerContactImage);
       });
 
       test('should toggle the showPlaceNewCallButton', function() {
@@ -254,30 +254,61 @@ suite('calls handler', function() {
       });
     });
 
-    suite('> hanging up the last incoming call', function() {
+    // This suite indirectly tests `exitCallScreenIfNoCalls()`. We should unit
+    // test this directly instead and rely on integration tests for most of what
+    // we're currently doing here.
+    suite('> hanging up the last incoming call, `exitCallScreenIfNoCalls()`',
+    function() {
       setup(function() {
         var mockCall = new MockCall('12334', 'incoming');
         telephonyAddCall.call(this, mockCall, {trigger: true});
 
         MockNavigatorMozTelephony.calls = [];
+
+        this.sinon.spy(window, 'close');
+        MockNavigatorMozTelephony.mTriggerCallsChanged();
       });
 
       test('should close the callscreen app after a delay', function() {
-        this.sinon.spy(window, 'close');
-        MockNavigatorMozTelephony.mTriggerCallsChanged();
         sinon.assert.notCalled(window.close);
         this.sinon.clock.tick(MockCallScreen.callEndPromptTime);
         sinon.assert.calledOnce(window.close);
       });
 
       test('should only set 1 timer for app close delay', function() {
-        this.sinon.spy(window, 'close');
-        MockNavigatorMozTelephony.mTriggerCallsChanged();
         this.sinon.clock.tick(MockCallScreen.callEndPromptTime/2);
         sinon.assert.notCalled(window.close);
         MockNavigatorMozTelephony.mTriggerCallsChanged();
         this.sinon.clock.tick(MockCallScreen.callEndPromptTime);
         sinon.assert.calledOnce(window.close);
+      });
+
+      test('should not close the callscreen app if a new call comes',
+      function() {
+        this.sinon.clock.tick(MockCallScreen.callEndPromptTime/2);
+
+        var mockCall = new MockCall('43321', 'incoming');
+        telephonyAddCall.call(this, mockCall, {trigger: true});
+        MockNavigatorMozTelephony.mTriggerCallsChanged();
+
+        this.sinon.clock.tick(MockCallScreen.callEndPromptTime);
+        sinon.assert.notCalled(window.close);
+      });
+
+      test('should set \'no-handled-calls\' class on `body`', function() {
+        assert.isTrue(document.body.classList.contains('no-handled-calls'));
+      });
+
+      test('should unset \'no-handled-calls\' class on `body` if new call come',
+      function() {
+        this.sinon.clock.tick(MockCallScreen.callEndPromptTime/2);
+
+        var mockCall = new MockCall('43321', 'incoming');
+        telephonyAddCall.call(this, mockCall, {trigger: true});
+        MockNavigatorMozTelephony.mTriggerCallsChanged();
+
+        this.sinon.clock.tick(MockCallScreen.callEndPromptTime);
+        assert.isFalse(document.body.classList.contains('no-handled-calls'));
       });
     });
 

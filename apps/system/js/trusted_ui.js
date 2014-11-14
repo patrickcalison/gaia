@@ -1,6 +1,8 @@
 /* -*- Mode: js2; js2-basic-offset: 2; indent-tabs-mode: nil -*- */
 /* vim: set ft=javascript sw=2 ts=2 autoindent cindent expandtab: */
 
+/* global inputWindowManager */
+
 'use strict';
 
 var TrustedUIManager = {
@@ -178,10 +180,10 @@ var TrustedUIManager = {
     var frame = appWindowManager.getApp(origin).frame;
     frame.style.visibility = 'visible';
     frame.classList.remove('back');
-    if (!System.currentApp.isHomescreen) {
+    if (!Service.currentApp.isHomescreen) {
       this.publish('trusteduihide', { origin: origin });
     }
-    if (System.currentApp.origin == origin) {
+    if (Service.currentApp.origin == origin) {
       frame.classList.add('restored');
       frame.addEventListener('transitionend', function removeRestored() {
         frame.removeEventListener('transitionend', removeRestored);
@@ -433,7 +435,7 @@ var TrustedUIManager = {
         this._hide();
         break;
       case 'keyboardchange':
-        var keyboardHeight = KeyboardManager.getHeight();
+        var keyboardHeight = inputWindowManager.getHeight();
         this._setHeight(window.innerHeight - StatusBar.height - keyboardHeight);
         break;
       case 'keyboardhide':

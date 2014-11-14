@@ -16,7 +16,8 @@ function DownloadNotification(download) {
   NotificationScreen.addNotification(this._getInfo());
 
   // We have to listen for state changes
-  this.download.onstatechange = this._update.bind(this);
+  this.listener = this._update.bind(this);
+  this.download.addEventListener('statechange', this.listener);
 }
 
 DownloadNotification.prototype = {
@@ -120,16 +121,9 @@ DownloadNotification.prototype = {
 
     req.onsuccess = (function _storeDownloadOnSuccess(request) {
       // We don't care about any more state changes to the download.
-      download.onstatechange = null;
+      this.download.removeEventListener('statechange', this.listener);
       // Update the download object to the datastore representation.
       this.download = req.result;
-
-      var mozDownloadManager = navigator.mozDownloadManager;
-      if (mozDownloadManager) {
-        // Once we've added the download to our data store we own it so clear
-        // all references to it from the Downloads API.
-        mozDownloadManager.clearAllDone();
-      }
     }).bind(this);
 
     req.onerror = function _storeDownloadOnError(e) {
