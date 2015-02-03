@@ -37,7 +37,7 @@ class TimePicker(Base):
     def tap_done(self):
         time_picker = self.marionette.find_element(*self._time_picker_locator)
         self.marionette.find_element(*self._done_button_locator).tap()
-        Wait(self.marionette).until(expected.element_not_displayed(time_picker))
+        self.wait_for_element_not_displayed(*self._time_picker_locator)
         # TODO: wait for the time picker to fade out Bug 1038186
         time.sleep(2)
         self.apps.switch_to_displayed_app()
