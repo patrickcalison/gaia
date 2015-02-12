@@ -21,7 +21,8 @@ class TestLockScreen(GaiaTestCase):
         datetime = self.settings.open_date_and_time_settings()
 
         # Auto time update is by default set to true, turn it off to make region change
-        datetime.change_automatic_time_update(False)
+        datetime.toggle_automatic_time_update()
+        self.assertFalse(datetime.is_autotime_enabled, 'Autotime still enabled')
 
         # record time and change the region
         old_time = datetime.get_current_time_text
@@ -43,7 +44,8 @@ class TestLockScreen(GaiaTestCase):
         self.apps.switch_to_displayed_app()
 
         # Enable the auto time update, so the regions change back and date/time is reverted back
-        datetime.change_automatic_time_update(True)
+        datetime.toggle_automatic_time_update()
+        self.assertTrue(datetime.is_autotime_enabled, 'Autotime still disabled')
         self.marionette.switch_to_frame()
         self.device.lock()
 
@@ -56,27 +58,26 @@ class TestLockScreen(GaiaTestCase):
         # Allow 5 minutes difference max
         self.assertLessEqual(self.get_time_difference(old_time, lock_screen.time), 5)
 
-
-    def get_time_difference(self, time_a, lockscreen_time):
+    def get_time_difference(self, old_time, new_lockscreen_time):
         """
         from the text values, get time difference.  Since lockscreen does not show AM/PM, it is not considered
-        time_a: time from settings
-        lockscreen_time: time shown on lockscreen
+        old_time: time from settings
+        new_lockscreen_time: time shown on lockscreen
         """
-        time_a_hr = int(time_a[0:time_a.find(':')])
-        lockscreen_time_hr = int(lockscreen_time[0:lockscreen_time.find(':')])
-        time_a_mm = int(time_a[time_a.find(':')+1:time_a.find(' ')])
-        lockscreen_time_mm = int(lockscreen_time[lockscreen_time.find(':')+1:])
+        old_time_hr = int(old_time[0:old_time.find(':')])
+        new_lockscreen_time_hr = int(new_lockscreen_time[0:new_lockscreen_time.find(':')])
+        old_time_mm = int(old_time[old_time.find(':')+1:old_time.find(' ')])
+        new_lockscreen_time_mm = int(new_lockscreen_time[new_lockscreen_time.find(':')+1:])
 
-        if time_a_hr == 12:
-            time_a_hr = 0
+        if old_time_hr == 12:
+            old_time_hr = 0
 
-        if lockscreen_time_hr == 12:
-            lockscreen_time_hr = 0
+        if new_lockscreen_time_hr == 12:
+            new_lockscreen_time_hr = 0
 
-        time_a_converted = time_a_hr * 60 + time_a_mm
-        lockscreen_time_converted = lockscreen_time_hr * 60 + lockscreen_time_mm
-        difference = lockscreen_time_converted - time_a_converted
+        old_time_converted = old_time_hr * 60 + old_time_mm
+        new_lockscreen_time_converted = new_lockscreen_time_hr * 60 + new_lockscreen_time_mm
+        difference = new_lockscreen_time_converted - old_time_converted
         if difference < 0:
             difference += 12*60
 
