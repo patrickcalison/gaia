@@ -12,6 +12,9 @@ class TestLockScreen(GaiaTestCase):
         self.connect_to_local_area_network()
 
     def test_lockscreen_time_check(self):
+        """
+        https: // bugzilla.mozilla.org / show_bug.cgi?id = 1118054
+        """
 
         self.settings = Settings(self.marionette)
         self.settings.launch()
