@@ -24,7 +24,8 @@ class TestLockScreen(GaiaTestCase):
         datetime.toggle_automatic_time_update()
         self.assertFalse(datetime.is_autotime_enabled, 'Autotime still enabled')
 
-        # record time and change the region
+        # record time and change the region.  since no one will be in Atlantic Ocean timezone, change in time
+        # will be guaranteed.
         old_time = datetime.get_current_time_text
         datetime.set_region('Atlantic Ocean')
 
