@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from marionette.wait import Wait
 
 from gaiatest.apps.settings.app import Settings
@@ -18,26 +20,26 @@ class TestLockScreen(GaiaTestCase):
 
         self.settings = Settings(self.marionette)
         self.settings.launch()
-        datetime = self.settings.open_date_and_time_settings()
+        datetime_setting = self.settings.open_date_and_time_settings()
 
         # Auto time update is by default set to true, turn it off to make region change
-        datetime.toggle_automatic_time_update()
-        self.assertFalse(datetime.is_autotime_enabled, 'Autotime still enabled')
+        datetime_setting.toggle_automatic_time_update()
+        self.assertFalse(datetime_setting.is_autotime_enabled, 'Autotime still enabled')
 
         # record time and change the region.  since no one will be in Atlantic Ocean timezone, change in time
         # will be guaranteed.
-        old_time = datetime.get_current_time_text
-        datetime.set_region('Atlantic Ocean')
+        old_time = datetime_setting.get_current_time_text
+        datetime_setting.set_region('Atlantic Ocean')
 
         # get the displayed time after the region change
-        new_time = datetime.get_current_time_text
+        new_time = datetime_setting.get_current_time_text
         self.assertNotEqual(new_time, old_time)
 
         # lock screen and check time on the lockscreen
         self.marionette.switch_to_frame()
         self.device.lock()
         lock_screen = LockScreen(self.marionette)
-        self.assertLessEqual(self.get_time_difference(new_time, lock_screen.time), 1)
+        self.assertLessEqual(self.get_time_difference(new_time, lock_screen.time), 60)
 
         # configure to set the time automatically (this will revert the timezone change), then lock screen
         lock_screen.switch_to_frame()
@@ -45,8 +47,8 @@ class TestLockScreen(GaiaTestCase):
         self.apps.switch_to_displayed_app()
 
         # Enable the auto time update, so the regions change back and date/time is reverted back
-        datetime.toggle_automatic_time_update()
-        self.assertTrue(datetime.is_autotime_enabled, 'Autotime still disabled')
+        datetime_setting.toggle_automatic_time_update()
+        self.assertTrue(datetime_setting.is_autotime_enabled, 'Autotime still disabled')
         self.marionette.switch_to_frame()
         self.device.lock()
 
@@ -57,29 +59,17 @@ class TestLockScreen(GaiaTestCase):
 
         # Check it reverted to the correct time, and compare it with the previously shown time
         # Allow 5 minutes difference max
-        self.assertLessEqual(self.get_time_difference(old_time, lock_screen.time), 5)
+        self.assertLessEqual(self.get_time_difference(old_time, lock_screen.time), 240)
 
-    def get_time_difference(self, old_time, new_lockscreen_time):
+    def get_time_difference(self, old_time, new_time):
         """
-        from the text values, get time difference.  Since lockscreen does not show AM/PM, it is not considered
+        from the text values, get time difference, returns in seconds.
+        both should be in time struct format
         old_time: time from settings
-        new_lockscreen_time: time shown on lockscreen
+        new_time: time shown on lockscreen
         """
-        old_time_hr = int(old_time[0:old_time.find(':')])
-        new_lockscreen_time_hr = int(new_lockscreen_time[0:new_lockscreen_time.find(':')])
-        old_time_mm = int(old_time[old_time.find(':')+1:old_time.find(' ')])
-        new_lockscreen_time_mm = int(new_lockscreen_time[new_lockscreen_time.find(':')+1:])
+        dt_old_time = datetime.strptime(old_time, '%I:%M %p')
+        dt_new_time = datetime.strptime(new_time, '%I:%M %p')
 
-        if old_time_hr == 12:
-            old_time_hr = 0
-
-        if new_lockscreen_time_hr == 12:
-            new_lockscreen_time_hr = 0
-
-        old_time_converted = old_time_hr * 60 + old_time_mm
-        new_lockscreen_time_converted = new_lockscreen_time_hr * 60 + new_lockscreen_time_mm
-        difference = new_lockscreen_time_converted - old_time_converted
-        if difference < 0:
-            difference += 12*60
-
-        return difference
+        difference = dt_new_time - dt_old_time
+        return difference.seconds # this also works when new_time is on next day

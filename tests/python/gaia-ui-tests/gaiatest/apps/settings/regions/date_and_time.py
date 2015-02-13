@@ -68,5 +68,4 @@ class DateAndTime(Base):
 
     @property
     def get_current_time_text(self):
-        time = self.marionette.find_element(*self._time_value)
-        return time.text
+        return self.marionette.find_element(*self._time_value).text

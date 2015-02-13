@@ -54,7 +54,10 @@ class LockScreen(Base):
 
     @property
     def time(self):
-        return self.marionette.find_element(*self._time_locator).text
+        # The lockscreen doesn't display AM/PM since 2.0. It's still present behind a hidden span though.
+        lockscreen_time = self.marionette.execute_script(
+            "return document.getElementById('%s').innerHTML" % self._time_locator[1])
+        return lockscreen_time.replace('<span>', '').replace('</span>', '')
 
     def unlock(self):
         self._slide_to_unlock('homescreen')
