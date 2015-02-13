@@ -28,18 +28,19 @@ class TestLockScreen(GaiaTestCase):
 
         # record time and change the region.  since no one will be in Atlantic Ocean timezone, change in time
         # will be guaranteed.
-        old_time = datetime_setting.get_current_time_text
+        old_time = datetime_setting.get_current_time_datetime
         datetime_setting.set_region('Atlantic Ocean')
 
         # get the displayed time after the region change
-        new_time = datetime_setting.get_current_time_text
+        new_time = datetime_setting.get_current_time_datetime
         self.assertNotEqual(new_time, old_time)
 
         # lock screen and check time on the lockscreen
         self.marionette.switch_to_frame()
         self.device.lock()
         lock_screen = LockScreen(self.marionette)
-        self.assertLessEqual(self.get_time_difference(new_time, lock_screen.time), 60)
+        difference = lock_screen.time_in_datetime - new_time
+        self.assertLessEqual(difference.seconds, 60)
 
         # configure to set the time automatically (this will revert the timezone change), then lock screen
         lock_screen.switch_to_frame()
@@ -58,18 +59,6 @@ class TestLockScreen(GaiaTestCase):
         self.device.turn_screen_on()
 
         # Check it reverted to the correct time, and compare it with the previously shown time
-        # Allow 5 minutes difference max
-        self.assertLessEqual(self.get_time_difference(old_time, lock_screen.time), 240)
-
-    def get_time_difference(self, old_time, new_time):
-        """
-        from the text values, get time difference, returns in seconds.
-        both should be in time struct format
-        old_time: time from settings
-        new_time: time shown on lockscreen
-        """
-        dt_old_time = datetime.strptime(old_time, '%I:%M %p')
-        dt_new_time = datetime.strptime(new_time, '%I:%M %p')
-
-        difference = dt_new_time - dt_old_time
-        return difference.seconds # this also works when new_time is on next day
+        # Allow 4 minutes difference max
+        difference = lock_screen.time_in_datetime - old_time
+        self.assertLessEqual(difference.seconds, 240)
